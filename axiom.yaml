@@ -1,0 +1,125 @@
+name: christiangeorgelucas/name-tools
+version: 0.1.0
+language: typescript
+description: Deterministic parsing, formatting, and normalization of human personal
+    names — split a messy full-name string ("Dr. John Q. Public Jr.", "Smith, Jane
+    (Janie)", "Ludwig van der Berg III") into structured title/first/middle/last/
+    nickname/suffix components; reformat components into a chosen order; extract
+    just the first name, last name, initials, or nickname; normalize surname
+    capitalization using name-particle rules (McDonald, O'Brien, van der Berg,
+    MacLeod — not naive Title Case); detect whether a string plausibly is a
+    personal name versus an organization or garbage; and compare two name strings
+    for likely-same-person. Wraps parse-full-name (MIT, zero runtime dependencies),
+    which owns the hard, ambiguous parsing problem via its configurable
+    title/prefix/suffix catalogs and tolerant format detection. Recognizes a wide
+    single-word title/rank catalog (Dr., Rev., Prof., Col., Gen., and more with
+    extended_lists); a multi-word ABBREVIATED rank like "Lt. Col." is not
+    reliably captured as one title (the library matches titles word-by-word, not
+    as phrases) — see each node's description for exact coverage. Offline,
+    deterministic, pure text-in/structured-out; oversized input (over 500
+    characters) is rejected with a structured error rather than a crash.
+author: Christian George Lucas
+license: MIT
+tags:
+    - name
+    - person-name
+    - name-parsing
+    - contact
+    - crm
+    - kyc
+    - dedup
+    - normalization
+    - capitalization
+    - parse-full-name
+nodes:
+    - name: ParseName
+      input: ParseNameInput
+      output: ParsedName
+      description: >-
+        Parse a full name string in any order/format into structured
+        components: title, first, middle, last, nick(name), suffix. Handles
+        "Last, First" order, multi-word family-name particles (von/van/de/
+        della), a wide single-word title/rank catalog ("Dr.", "Rev.", with
+        `extended_lists` also "Col.", "Gen.", "Capt.", etc. — but NOT a
+        multi-word abbreviated rank like "Lt. Col.", which the underlying
+        library cannot capture as one title since it matches titles
+        word-by-word, not as phrases), suffixes ("Jr.", "III", "PhD"), and
+        nicknames in quotes or parentheses ("Robert \"Bob\" Smith").
+        Non-fatal ambiguities (e.g. multiple detected suffixes) surface as
+        `warnings`, never as a hard failure. `error` is set only for
+        oversized input or an internal fault.
+    - name: FormatName
+      input: FormatNameInput
+      output: FormatNameOutput
+      description: >-
+        Format structured name components (or a raw name string, parsed
+        internally) into a chosen order: "first_last" -> "First Last",
+        "last_first" -> "Last First", "last_comma_first" -> "Last, First",
+        "first_middle_last" -> "First Middle Last", "first_initial_last" ->
+        "First M. Last", or "formal" -> "Title First Middle Last, Suffix".
+        Empty components and their separators are omitted automatically.
+    - name: ExtractFirstName
+      input: NameInput
+      output: NameResult
+      description: >-
+        Extract just the first (given) name from a full name string of any
+        order/format, e.g. "Dr. Jane Q. Public" -> "Jane". `found` is false
+        (not an error) when no first name could be identified.
+    - name: ExtractLastName
+      input: NameInput
+      output: NameResult
+      description: >-
+        Extract just the last (family) name from a full name string of any
+        order/format, including multi-word particles, e.g. "Ludwig van der
+        Berg" -> "van der Berg". `found` is false (not an error) when no
+        last name could be identified.
+    - name: ExtractInitials
+      input: ExtractInitialsInput
+      output: NameResult
+      description: >-
+        Extract initials from a full name string, e.g. "John Q. Public" ->
+        "JQP" (default). `separator` controls the joining string (e.g. ". "
+        for "J. Q. P."); `exclude_middle` (default false) can drop
+        middle-name initials from the result.
+    - name: NormalizeCapitalization
+      input: NameInput
+      output: NameResult
+      description: >-
+        Correctly re-case a name string using name-particle capitalization
+        rules, not naive Title Case: "mcdonald" -> "McDonald", "o'brien" ->
+        "O'Brien", "VAN DER BERG" -> "van der Berg" (connector particles
+        lowercase mid-name), "macleod" -> "MacLeod" (curated common
+        Mac-clan-surname list, to avoid false positives on ordinary words
+        like "Machine" or "Mace"). Works on a single name string or a
+        multi-word full name.
+    - name: IsLikelyPersonName
+      input: NameInput
+      output: PersonNameLikelihood
+      description: >-
+        Heuristically detect whether a string plausibly represents a human
+        personal name, as opposed to an organization/company name or
+        garbage/placeholder text (e.g. "Acme Corp LLC", "N/A", "12345").
+        Returns `is_likely_name`, a heuristic `confidence` in [0,1] (a
+        relative ranking signal, not a calibrated probability), and human-
+        readable `reasons`.
+    - name: ExtractNickname
+      input: NameInput
+      output: NameResult
+      description: >-
+        Extract a nickname from a quoted or parenthetical segment of a full
+        name string, e.g. 'Robert "Bob" Smith' -> "Bob", "Jane Smith
+        (Janie)" -> "Janie". `found` is false (not an error) when no
+        nickname segment is present.
+    - name: CompareNames
+      input: CompareNamesInput
+      output: NameComparison
+      description: >-
+        Compare two name strings for likely-same-person by normalizing and
+        comparing their parsed components (last name, first name or
+        first-initial match). Returns a `match_level`
+        ("exact"/"likely"/"partial"/"no_match"), a heuristic `score` in
+        [0,1], which fields matched, and both parsed breakdowns for
+        inspection. Comparison is deterministic and component-based — it
+        does not consult any nickname-equivalence dictionary (e.g. it will
+        not match "Bob" to "Robert" unless one string literally contains the
+        other as a first-name/initial).

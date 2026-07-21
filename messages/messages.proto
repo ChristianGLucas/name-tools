@@ -1,0 +1,217 @@
+// This file defines the data contracts (messages) for your Axiom package.
+// Every node's --input and --output refers to a message defined here.
+//
+// Run `axiom create message <Name>` to scaffold a new message below.
+// Run `axiom generate` to compile these definitions into language bindings in gen/.
+//
+// DOCUMENTATION
+//   Comments written directly above a message or field declaration are extracted
+//   automatically at publish time and shown in the Axiom registry as documentation.
+//   Write your descriptions there — no separate doc files needed.
+//
+//   Leading comment  (no blank line before the declaration) → registry description ✓
+//   Detached comment (blank line before the declaration)    → ignored by registry  ✗
+//
+// This file is yours to edit. Axiom only appends new message blocks — it never
+// overwrites or removes content you have written.
+//
+// ---------------------------------------------------------------------------
+// christiangeorgelucas/name-tools — deterministic parsing, formatting, and
+// normalization of HUMAN PERSONAL names (contact dedup, CRM/KYC record
+// matching, personalization). Powered by parse-full-name (MIT), which owns
+// the algorithmically hard part: splitting an arbitrary, inconsistently-
+// formatted name string into title/first/middle/last/nickname/suffix
+// components, tolerating "Last, First" order, quoted/parenthetical
+// nicknames, and large configurable prefix/suffix/title catalogs. This
+// package adds input bounds, proto shaping, deterministic mixed-case
+// surname normalization (Mc/Mac/O'/particle rules the underlying library
+// does not itself apply generally), initials/format/compare glue, and a
+// person-vs-non-person heuristic — each backed by an independent-oracle
+// test.
+//
+// The canonical envelope is `ParsedName`: every node that produces a full
+// breakdown emits it, and FormatName/CompareNames consume it, so nodes
+// compose directly with each other without re-parsing.
+//
+// Vocabulary note (cross-package coherence with christiangeorgelucas/
+// vcard-tools, the PIM sibling package most likely to co-occur with this one
+// in a flow): vcard-tools' `Name` message uses RFC 6350 N-property field
+// names `family`/`given`/`additional[]`/`prefixes[]`/`suffixes[]`. This
+// package's `first`/`last` correspond to vcard-tools' `given`/`family`.
+// We deliberately do NOT adopt vcard's repeated-field shape: parse-full-name
+// natively returns middle names and suffixes as a single (space- or comma-
+// joined) string, not a decomposed list, and re-splitting them would assert
+// structure the library does not guarantee. A flow wiring this package to
+// vcard-tools maps first->given, last->family, nick->a vcard-level nickname,
+// and title/suffix into vcard's prefixes/suffixes lists.
+//
+// Every node's ONLY hard-failure mode is a structured `error` field (set on
+// oversized input — over 500 characters, a personal name never legitimately
+// exceeds this — or an internal fault); nodes never throw. Non-fatal parse
+// ambiguities (e.g. "2 middle names found", "extra commas found") surface as
+// `warnings`, mirroring parse-full-name's own non-fatal error-array
+// semantics, and never block a result.
+
+syntax = "proto3";
+
+package christiangeorgelucas.name_tools;
+
+// The canonical structured-name envelope. Produced by ParseName; consumed by
+// FormatName and CompareNames. `first`/`middle`/`last`/`title`/`suffix`/
+// `nick` are each a single string — parse-full-name joins multiple middle
+// names or multiple detected suffixes into one space/comma-separated string
+// rather than a list, and this envelope preserves that shape rather than
+// inventing a false decomposition.
+message ParsedName {
+  // Honorific/professional title or prefix, e.g. "Dr.", "Rev.", "Col.".
+  // A multi-word ABBREVIATED rank like "Lt. Col." is not reliably captured
+  // as one title (see ParseName's description for why).
+  string title = 1;
+  // Given (first) name.
+  string first = 2;
+  // Middle name(s). Multiple middle names are joined with a single space.
+  string middle = 3;
+  // Family (last) name, including any multi-word particle (e.g.
+  // "van der Berg", "de la Cruz") — parse-full-name keeps name-prefix
+  // particles attached to the surname they modify.
+  string last = 4;
+  // Nickname extracted from a quoted or parenthetical segment of the
+  // original string, e.g. Robert "Bob" Smith -> nick = "Bob". Empty if none.
+  string nick = 5;
+  // Suffix, e.g. "Jr.", "III", "PhD". Multiple detected suffixes are joined
+  // with ", ".
+  string suffix = 6;
+  // The original input string, verbatim (post-trim), for traceability.
+  string original = 7;
+  // Non-fatal parse ambiguities (e.g. "2 middle names found"). Never blocks
+  // a result; `error` (below) is the only hard-failure signal.
+  repeated string warnings = 8;
+  // Set (non-empty) iff parsing hard-failed (oversized input or an internal
+  // fault). All other fields are empty in that case. Meaningless (ignored)
+  // when this message is used as a node's input component.
+  string error = 9;
+}
+
+// Input for ParseName: the one node that does a full breakdown.
+message ParseNameInput {
+  // The full name string to parse, in any order/format. Max 500 characters.
+  string name = 1;
+  // If true, normalize the case of every returned component using
+  // parse-full-name's own built-in case-fixing pass (best for all-upper or
+  // all-lower input). If false (default), auto-detect: fix case only when
+  // the whole input is all-uppercase or all-lowercase, leave mixed-case
+  // input untouched. For a more thorough, particle-aware capitalization
+  // pass on any input, use NormalizeCapitalization instead/afterward.
+  bool fix_case = 2;
+  // If true, use parse-full-name's extended prefix/suffix/title catalogs
+  // (up to 97 prefixes / 23 suffixes / 204 titles, more international
+  // coverage) instead of its short default lists. Default false.
+  bool extended_lists = 3;
+}
+
+// A plain name string, used as input by the single-purpose extraction and
+// analysis nodes (ExtractFirstName, ExtractLastName, NormalizeCapitalization,
+// IsLikelyPersonName, ExtractNickname).
+message NameInput {
+  // The name string. Max 500 characters.
+  string name = 1;
+}
+
+// A single extracted/normalized string result plus an ok/error signal —
+// shared output shape for the single-purpose extraction nodes.
+message NameResult {
+  // The extracted or normalized value. Empty if `found` is false or `error`
+  // is set.
+  string value = 1;
+  // True iff a non-empty value for this specific extraction was found in
+  // the input (e.g. ExtractNickname on a name with no nickname -> false,
+  // not an error).
+  bool found = 2;
+  // Set (non-empty) iff the operation hard-failed (oversized input, or an
+  // internal fault). `value`/`found` are meaningless when this is set.
+  string error = 3;
+}
+
+// Input for FormatName.
+message FormatNameInput {
+  // Structured components to format. Takes precedence over `name_raw` when
+  // any field on it is non-empty.
+  ParsedName name = 1;
+  // Convenience: a raw, unparsed name string. Used (parsed internally via
+  // ParseName's default options) only when `name` is entirely empty.
+  string name_raw = 2;
+  // One of: "first_last" (default) -> "First Last"; "last_first" ->
+  // "Last First"; "last_comma_first" -> "Last, First"; "first_middle_last"
+  // -> "First Middle Last"; "first_initial_last" -> "First M. Last";
+  // "formal" -> "Title First Middle Last, Suffix", omitting any empty
+  // component and its separator. Unrecognized/empty -> "first_last".
+  string order = 3;
+}
+
+message FormatNameOutput {
+  // The formatted name string. Empty if `error` is set.
+  string formatted = 1;
+  // Set (non-empty) iff both `name` and `name_raw` were empty, or an
+  // internal fault occurred.
+  string error = 2;
+}
+
+// Input for ExtractInitials.
+message ExtractInitialsInput {
+  // The name string to extract initials from. Max 500 characters.
+  string name = 1;
+  // Placed between each initial letter. Default "" (e.g. "John Q. Public"
+  // -> "JQP"). Set to ". " for "J. Q. P.", etc.
+  string separator = 2;
+  // Exclude the middle-name initial(s), if any, from the result. Default
+  // false (middle initials ARE included by default) — named/defaulted this
+  // way, rather than an "include" flag defaulting true, because proto3
+  // scalar bools cannot distinguish "field omitted" from "explicitly
+  // false", so the zero value must be the more common case.
+  bool exclude_middle = 3;
+}
+
+// Output of IsLikelyPersonName.
+message PersonNameLikelihood {
+  // True iff the input plausibly represents a human personal name rather
+  // than an organization, placeholder, or garbage string.
+  bool is_likely_name = 1;
+  // Heuristic confidence in [0.0, 1.0]. Not a calibrated probability —
+  // treat as a relative ranking signal, not ground truth.
+  double confidence = 2;
+  // Human-readable reasons behind the verdict, e.g. "contains legal-entity
+  // keyword: LLC", "no alphabetic name-like tokens", "matches personal-name
+  // shape (1-4 capitalized word tokens)".
+  repeated string reasons = 3;
+  // Set (non-empty) iff an internal fault occurred; other fields are
+  // meaningless when this is set.
+  string error = 4;
+}
+
+// Input for CompareNames.
+message CompareNamesInput {
+  // First name string to compare. Max 500 characters.
+  string name_a = 1;
+  // Second name string to compare. Max 500 characters.
+  string name_b = 2;
+}
+
+// Output of CompareNames.
+message NameComparison {
+  // One of "exact" (normalized components identical), "likely" (last name
+  // matches and first name matches or one is an initial of the other),
+  // "partial" (last name matches only, or first matches only), "no_match".
+  string match_level = 1;
+  // Heuristic similarity score in [0.0, 1.0]; higher = more likely the same
+  // person. Derived from which components matched, not a statistical model.
+  double score = 2;
+  // Which components matched, e.g. ["last", "first_initial"].
+  repeated string matched_fields = 3;
+  // The parsed breakdown of name_a, for inspection/debugging.
+  ParsedName parsed_a = 4;
+  // The parsed breakdown of name_b, for inspection/debugging.
+  ParsedName parsed_b = 5;
+  // Set (non-empty) iff both inputs were empty, oversized, or an internal
+  // fault occurred.
+  string error = 6;
+}
