@@ -40,6 +40,21 @@ export function checkBounds(name: string): string | null {
   return null;
 }
 
+/** Same bound, applied to each of several already-split component strings
+ * (e.g. a structured ParsedName's title/first/middle/last/nick/suffix
+ * fields passed directly into FormatName) rather than one raw name string.
+ * Every field a node reads must be bound-checked at its own entry point,
+ * not just the "parse a raw string" path — this closes that gap for any
+ * node that also accepts pre-structured input. */
+export function checkFieldsBounds(fields: string[]): string | null {
+  for (const f of fields) {
+    if (f.length > MAX_NAME_CHARS) {
+      return `input exceeds ${MAX_NAME_CHARS} characters`;
+    }
+  }
+  return null;
+}
+
 export interface ParseOptions {
   fixCase?: boolean;
   extendedLists?: boolean;
@@ -127,12 +142,19 @@ function capitalizeWord(word: string): string {
   const bareLower = lower.replace(/\.$/, '');
 
   if (UPPER_TOKENS.has(bareLower)) return lower.toUpperCase();
+  // Particle check MUST run before the single-letter-initial check below:
+  // two entries in LOWERCASE_PARTICLES ("y", "e") are themselves a single
+  // bare letter (Spanish "y" / Portuguese "e", as in "Ortega y Gasset"),
+  // and checking length first would always uppercase them as if they were
+  // an initial. A real initial always keeps ITS distinguishing period
+  // ("Y." / "E."), which is not in this set (only bare "y"/"e" are), so
+  // there is no ambiguity between the two in practice.
+  if (LOWERCASE_PARTICLES.has(lower)) return lower;
 
   const bare = word.replace(/\.$/, '');
   if (bare.length === 1) {
     return bare.toUpperCase() + (word.endsWith('.') ? '.' : '');
   }
-  if (LOWERCASE_PARTICLES.has(lower)) return lower;
 
   if (lower.length > 2 && lower.startsWith('mc')) {
     return 'Mc' + capitalizeSegment(word.slice(2));

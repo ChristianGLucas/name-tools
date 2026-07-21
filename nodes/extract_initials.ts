@@ -4,9 +4,9 @@ import { checkBounds, rawParse, computeInitials, errorMessage } from './lib';
 
 /**
  * Extract initials from a full name string, e.g. "John Q. Public" -> "JQP"
- * (default). `separator` controls the joining string (e.g. ". " for
- * "J. Q. P."); `exclude_middle` (default false) can drop middle-name
- * initials from the result.
+ * (default). `separator` is placed BETWEEN initials, not appended after the
+ * last one (e.g. ". " gives "J. Q. P", no trailing period); `exclude_middle`
+ * (default false) can drop middle-name initials from the result.
  *
  * @param ax - Platform context: ax.log for logging, ax.secrets for secrets.
  */

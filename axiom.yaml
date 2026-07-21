@@ -78,9 +78,10 @@ nodes:
       output: NameResult
       description: >-
         Extract initials from a full name string, e.g. "John Q. Public" ->
-        "JQP" (default). `separator` controls the joining string (e.g. ". "
-        for "J. Q. P."); `exclude_middle` (default false) can drop
-        middle-name initials from the result.
+        "JQP" (default). `separator` controls the string placed BETWEEN
+        initials, not appended after the last one (e.g. ". " for
+        "J. Q. P", no trailing period); `exclude_middle` (default false)
+        can drop middle-name initials from the result.
     - name: NormalizeCapitalization
       input: NameInput
       output: NameResult

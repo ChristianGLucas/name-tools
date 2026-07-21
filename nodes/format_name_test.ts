@@ -102,4 +102,16 @@ describe('FormatName', () => {
     const r = formatName(ctx, input);
     expect(r.getError()).toContain('exceeds');
   });
+
+  // REGRESSION (adversarial review, commit c11feef): the structured `name`
+  // path never bound-checked its component fields (only name_raw was
+  // checked), so an oversized field on the structured input path bypassed
+  // the input-length contract every other node enforces.
+  it('rejects an oversized structured component field as a structured error', () => {
+    const input = new FormatNameInput();
+    input.setName(structured({ first: 'A'.repeat(MAX_NAME_CHARS + 1), last: 'Smith' }));
+    const r = formatName(ctx, input);
+    expect(r.getError()).toContain('exceeds');
+    expect(r.getFormatted()).toBe('');
+  });
 });

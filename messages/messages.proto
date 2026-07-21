@@ -160,8 +160,9 @@ message FormatNameOutput {
 message ExtractInitialsInput {
   // The name string to extract initials from. Max 500 characters.
   string name = 1;
-  // Placed between each initial letter. Default "" (e.g. "John Q. Public"
-  // -> "JQP"). Set to ". " for "J. Q. P.", etc.
+  // Placed BETWEEN each initial letter, not appended after the last one.
+  // Default "" (e.g. "John Q. Public" -> "JQP"). Set to ". " for
+  // "J. Q. P" (no trailing period), etc.
   string separator = 2;
   // Exclude the middle-name initial(s), if any, from the result. Default
   // false (middle initials ARE included by default) — named/defaulted this

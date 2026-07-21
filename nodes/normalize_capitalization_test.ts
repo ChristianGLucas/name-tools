@@ -44,6 +44,21 @@ describe('NormalizeCapitalization', () => {
     expect(run('macy').getValue()).toBe('Macy');
   });
 
+  // REGRESSION (adversarial review, commit c11feef): single-letter
+  // particles "y" (Spanish "and") and "e" (Portuguese "and") were
+  // unreachable dead code — the single-character-initial branch ran first
+  // and always uppercased them, e.g. "jose ortega y gasset" wrongly became
+  // "...Y..." instead of "...y...". Real historical names, not contrived.
+  it('keeps single-letter connector particles "y"/"e" lowercase, not uppercased as initials', () => {
+    expect(run('jose ortega y gasset').getValue()).toBe('Jose Ortega y Gasset');
+    expect(run('silva e costa').getValue()).toBe('Silva e Costa');
+  });
+
+  it('still uppercases a genuine single-letter initial with a period', () => {
+    // Distinguishes a real initial ("Y.") from the particle ("y", no period).
+    expect(run('jane y. public').getValue()).toBe('Jane Y. Public');
+  });
+
   it('handles hyphenated compounds per hyphen-segment', () => {
     expect(run('smith-jones').getValue()).toBe('Smith-Jones');
   });
