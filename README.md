@@ -5,7 +5,7 @@ names, wrapping [parse-full-name](https://www.npmjs.com/package/parse-full-name)
 dependencies) — which owns the hard, ambiguous parsing problem via its configurable
 title/prefix/suffix catalogs and tolerant format detection.
 
-Built for the [Axiom](https://axiom.dev) marketplace, published under the `christiangeorgelucas` handle.
+Built for the [Axiom](https://axiomide.com) marketplace, published under the `christiangeorgelucas` handle.
 
 ## What's here
 
