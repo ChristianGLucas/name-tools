@@ -1,6 +1,6 @@
 import { CompareNamesInput, NameComparison } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, rawParse, toParsedNameMessage, compareParsedNames, errorMessage } from './lib';
+import { rawParse, toParsedNameMessage, compareParsedNames, errorMessage } from './lib';
 
 /**
  * Compare two name strings for likely-same-person by normalizing and
@@ -22,16 +22,6 @@ export function compareNames(ax: AxiomContext, input: CompareNamesInput): NameCo
 
   if (!nameA.trim() && !nameB.trim()) {
     out.setError('both name_a and name_b were empty');
-    return out;
-  }
-  const boundsA = checkBounds(nameA);
-  if (boundsA) {
-    out.setError(`name_a: ${boundsA}`);
-    return out;
-  }
-  const boundsB = checkBounds(nameB);
-  if (boundsB) {
-    out.setError(`name_b: ${boundsB}`);
     return out;
   }
 

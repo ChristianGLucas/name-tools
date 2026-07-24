@@ -7,52 +7,21 @@
 // The algorithmically hard part — splitting an arbitrary, ambiguous full-
 // name string into title/first/middle/last/nick/suffix components — is
 // entirely owned by parse-full-name; nothing here re-implements that.
-// What lives here is: (a) an input-length bound enforced BEFORE the library
-// ever sees the input, (b) a raw-object <-> proto bridge, (c) a small,
+// What lives here is: (a) a raw-object <-> proto bridge, (b) a small,
 // deterministic, name-particle-aware capitalization normalizer (Mc/Mac/O'/
 // van-der-von connectors) that the library does not itself apply generally,
-// and (d) format/initials/likelihood/compare glue built on top of the
-// library's own parsed components.
+// and (c) format/initials/likelihood/compare glue built on top of the
+// library's own parsed components. Payload size is the platform's job, not
+// this package's — no node here imposes a length cap on the input string.
 
 import { parseFullName, RawParsedName } from 'parse-full-name';
 import { ParsedName } from '../gen/messages_pb';
-
-/** Ceiling for any raw name-string input. A real personal name (even with a
- * long compound title, multiple middle names, and a nickname) never
- * legitimately approaches this; it exists to bound the cost of the parser's
- * O(n) word-scan passes on hostile input, checked before any parsing. */
-export const MAX_NAME_CHARS = 500;
 
 export function errorMessage(e: unknown, context: string): string {
   if (e instanceof Error) {
     return `${context}: ${e.message}`;
   }
   return `${context}: ${String(e)}`;
-}
-
-/** Returns a bound-violation error string, or null if `name` is within
- * bounds and parseable at all (a non-string can't reach here — the proto
- * field is typed `string`, so this only ever checks length). */
-export function checkBounds(name: string): string | null {
-  if (name.length > MAX_NAME_CHARS) {
-    return `input exceeds ${MAX_NAME_CHARS} characters`;
-  }
-  return null;
-}
-
-/** Same bound, applied to each of several already-split component strings
- * (e.g. a structured ParsedName's title/first/middle/last/nick/suffix
- * fields passed directly into FormatName) rather than one raw name string.
- * Every field a node reads must be bound-checked at its own entry point,
- * not just the "parse a raw string" path — this closes that gap for any
- * node that also accepts pre-structured input. */
-export function checkFieldsBounds(fields: string[]): string | null {
-  for (const f of fields) {
-    if (f.length > MAX_NAME_CHARS) {
-      return `input exceeds ${MAX_NAME_CHARS} characters`;
-    }
-  }
-  return null;
 }
 
 export interface ParseOptions {

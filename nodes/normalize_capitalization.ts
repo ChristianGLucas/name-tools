@@ -1,6 +1,6 @@
 import { NameInput, NameResult } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, normalizeNameCapitalization, errorMessage } from './lib';
+import { normalizeNameCapitalization, errorMessage } from './lib';
 
 /**
  * Correctly re-case a name string using name-particle capitalization rules,
@@ -15,11 +15,6 @@ import { checkBounds, normalizeNameCapitalization, errorMessage } from './lib';
 export function normalizeCapitalization(ax: AxiomContext, input: NameInput): NameResult {
   const out = new NameResult();
   const name = input.getName();
-  const bounds = checkBounds(name);
-  if (bounds) {
-    out.setError(bounds);
-    return out;
-  }
   try {
     const trimmed = name.trim();
     if (!trimmed) {

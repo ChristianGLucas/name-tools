@@ -1,7 +1,6 @@
 import { CompareNamesInput } from '../gen/messages_pb';
 import { compareNames } from './compare_names';
 import { ctx } from './testkit';
-import { MAX_NAME_CHARS } from './lib';
 
 function run(a: string, b: string) {
   const input = new CompareNamesInput();
@@ -68,13 +67,13 @@ describe('CompareNames', () => {
     expect(r.getError()).toContain('empty');
   });
 
-  it('rejects oversized name_a as a structured error', () => {
-    const r = run('A'.repeat(MAX_NAME_CHARS + 1), 'Jane Public');
-    expect(r.getError()).toContain('name_a');
+  it('handles a large name_a without crashing (no payload-length cap)', () => {
+    const r = run('A'.repeat(2000), 'Jane Public');
+    expect(r.getError()).toBe('');
   });
 
-  it('rejects oversized name_b as a structured error', () => {
-    const r = run('Jane Public', 'A'.repeat(MAX_NAME_CHARS + 1));
-    expect(r.getError()).toContain('name_b');
+  it('handles a large name_b without crashing (no payload-length cap)', () => {
+    const r = run('Jane Public', 'A'.repeat(2000));
+    expect(r.getError()).toBe('');
   });
 });

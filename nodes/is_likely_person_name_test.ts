@@ -1,7 +1,6 @@
 import { NameInput } from '../gen/messages_pb';
 import { isLikelyPersonName } from './is_likely_person_name';
 import { ctx } from './testkit';
-import { MAX_NAME_CHARS } from './lib';
 
 function run(name: string) {
   const input = new NameInput();
@@ -64,8 +63,8 @@ describe('IsLikelyPersonName', () => {
     expect(a.toObject()).toEqual(b.toObject());
   });
 
-  it('rejects oversized input as a structured error', () => {
-    const r = run('A'.repeat(MAX_NAME_CHARS + 1));
-    expect(r.getError()).toContain('exceeds');
+  it('handles a large input without crashing (no payload-length cap)', () => {
+    const r = run('A'.repeat(2000));
+    expect(r.getError()).toBe('');
   });
 });

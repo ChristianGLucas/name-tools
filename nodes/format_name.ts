@@ -1,6 +1,6 @@
 import { FormatNameInput, FormatNameOutput, ParsedName } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, checkFieldsBounds, rawParse, buildFormattedName, errorMessage } from './lib';
+import { rawParse, buildFormattedName, errorMessage } from './lib';
 import { RawParsedName } from 'parse-full-name';
 
 function toRaw(p: ParsedName): RawParsedName {
@@ -45,25 +45,8 @@ export function formatName(ax: AxiomContext, input: FormatNameInput): FormatName
   try {
     let components: RawParsedName;
     if (structured && !isEmptyParsedName(structured)) {
-      const structuredBounds = checkFieldsBounds([
-        structured.getTitle(),
-        structured.getFirst(),
-        structured.getMiddle(),
-        structured.getLast(),
-        structured.getNick(),
-        structured.getSuffix(),
-      ]);
-      if (structuredBounds) {
-        out.setError(structuredBounds);
-        return out;
-      }
       components = toRaw(structured);
     } else if (raw) {
-      const bounds = checkBounds(raw);
-      if (bounds) {
-        out.setError(bounds);
-        return out;
-      }
       components = rawParse(raw);
     } else {
       out.setError('both name and name_raw were empty');

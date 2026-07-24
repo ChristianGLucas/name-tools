@@ -1,7 +1,6 @@
 import { ParseNameInput } from '../gen/messages_pb';
 import { parseName } from './parse_name';
 import { ctx } from './testkit';
-import { MAX_NAME_CHARS } from './lib';
 
 function parse(name: string, opts: { fixCase?: boolean; extendedLists?: boolean } = {}) {
   const input = new ParseNameInput();
@@ -83,14 +82,8 @@ describe('ParseName', () => {
     expect(r.getWarningsList().length).toBeGreaterThan(0);
   });
 
-  it('rejects oversized input as a structured error, never a crash', () => {
-    const r = parse('A'.repeat(MAX_NAME_CHARS + 1));
-    expect(r.getError()).toContain('exceeds');
-    expect(r.getFirst()).toBe('');
-  });
-
-  it('accepts input exactly at the bound', () => {
-    const r = parse('A'.repeat(MAX_NAME_CHARS));
+  it('handles a large input without crashing (no payload-length cap)', () => {
+    const r = parse('A'.repeat(2000));
     expect(r.getError()).toBe('');
   });
 

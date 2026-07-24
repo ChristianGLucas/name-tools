@@ -1,6 +1,6 @@
 import { ParseNameInput, ParsedName } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, rawParse, toParsedNameMessage, errorMessage } from './lib';
+import { rawParse, toParsedNameMessage, errorMessage } from './lib';
 
 /**
  * Parse a full name string in any order/format into structured components:
@@ -11,19 +11,12 @@ import { checkBounds, rawParse, toParsedNameMessage, errorMessage } from './lib'
  * rank like "Lt. Col.", since the underlying library matches titles
  * word-by-word, not as phrases), suffixes ("Jr.", "III", "PhD"), and
  * nicknames in quotes or parentheses. Non-fatal ambiguities surface as
- * `warnings`; `error` is set only for oversized input or an internal
- * fault.
+ * `warnings`; `error` is set only for an internal fault.
  *
  * @param ax - Platform context: ax.log for logging, ax.secrets for secrets.
  */
 export function parseName(ax: AxiomContext, input: ParseNameInput): ParsedName {
   const name = input.getName();
-  const bounds = checkBounds(name);
-  if (bounds) {
-    const out = new ParsedName();
-    out.setError(bounds);
-    return out;
-  }
   try {
     const trimmed = name.trim();
     const raw = rawParse(name, {

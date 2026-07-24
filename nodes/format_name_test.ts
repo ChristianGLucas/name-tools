@@ -1,7 +1,6 @@
 import { FormatNameInput, ParsedName } from '../gen/messages_pb';
 import { formatName } from './format_name';
 import { ctx } from './testkit';
-import { MAX_NAME_CHARS } from './lib';
 
 function structured(fields: Partial<{ title: string; first: string; middle: string; last: string; suffix: string }>): ParsedName {
   const p = new ParsedName();
@@ -96,22 +95,23 @@ describe('FormatName', () => {
     expect(r.getFormatted()).toBe('');
   });
 
-  it('rejects oversized name_raw as a structured error', () => {
+  it('handles a large name_raw without crashing (no payload-length cap)', () => {
     const input = new FormatNameInput();
-    input.setNameRaw('A'.repeat(MAX_NAME_CHARS + 1));
+    input.setNameRaw('A'.repeat(2000));
     const r = formatName(ctx, input);
-    expect(r.getError()).toContain('exceeds');
+    expect(r.getError()).toBe('');
   });
 
   // REGRESSION (adversarial review, commit c11feef): the structured `name`
-  // path never bound-checked its component fields (only name_raw was
-  // checked), so an oversized field on the structured input path bypassed
-  // the input-length contract every other node enforces.
-  it('rejects an oversized structured component field as a structured error', () => {
+  // path used to skip a bound check the raw-string path applied, an
+  // asymmetry between the two input paths. Both paths must behave
+  // consistently on a large input -- neither crashes, neither imposes a
+  // length cap (payload size is the platform's job, not this node's).
+  it('handles a large structured component field without crashing, symmetric with name_raw', () => {
     const input = new FormatNameInput();
-    input.setName(structured({ first: 'A'.repeat(MAX_NAME_CHARS + 1), last: 'Smith' }));
+    input.setName(structured({ first: 'A'.repeat(2000), last: 'Smith' }));
     const r = formatName(ctx, input);
-    expect(r.getError()).toContain('exceeds');
-    expect(r.getFormatted()).toBe('');
+    expect(r.getError()).toBe('');
+    expect(r.getFormatted()).toContain('Smith');
   });
 });

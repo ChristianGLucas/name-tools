@@ -1,6 +1,6 @@
 import { ExtractInitialsInput, NameResult } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, rawParse, computeInitials, errorMessage } from './lib';
+import { rawParse, computeInitials, errorMessage } from './lib';
 
 /**
  * Extract initials from a full name string, e.g. "John Q. Public" -> "JQP"
@@ -13,11 +13,6 @@ import { checkBounds, rawParse, computeInitials, errorMessage } from './lib';
 export function extractInitials(ax: AxiomContext, input: ExtractInitialsInput): NameResult {
   const out = new NameResult();
   const name = input.getName();
-  const bounds = checkBounds(name);
-  if (bounds) {
-    out.setError(bounds);
-    return out;
-  }
   try {
     const raw = rawParse(name);
     const initials = computeInitials(raw, {

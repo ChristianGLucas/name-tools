@@ -1,6 +1,6 @@
 import { NameInput, NameResult } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, rawParse, errorMessage } from './lib';
+import { rawParse, errorMessage } from './lib';
 
 /**
  * Extract a nickname from a quoted or parenthetical segment of a full name
@@ -13,11 +13,6 @@ import { checkBounds, rawParse, errorMessage } from './lib';
 export function extractNickname(ax: AxiomContext, input: NameInput): NameResult {
   const out = new NameResult();
   const name = input.getName();
-  const bounds = checkBounds(name);
-  if (bounds) {
-    out.setError(bounds);
-    return out;
-  }
   try {
     const raw = rawParse(name);
     if (raw.nick) {

@@ -1,6 +1,6 @@
 import { NameInput, PersonNameLikelihood } from '../gen/messages_pb';
 import { AxiomContext } from '../gen/axiomContext';
-import { checkBounds, assessPersonNameLikelihood, errorMessage } from './lib';
+import { assessPersonNameLikelihood, errorMessage } from './lib';
 
 /**
  * Heuristically detect whether a string plausibly represents a human
@@ -14,11 +14,6 @@ import { checkBounds, assessPersonNameLikelihood, errorMessage } from './lib';
 export function isLikelyPersonName(ax: AxiomContext, input: NameInput): PersonNameLikelihood {
   const out = new PersonNameLikelihood();
   const name = input.getName();
-  const bounds = checkBounds(name);
-  if (bounds) {
-    out.setError(bounds);
-    return out;
-  }
   try {
     const result = assessPersonNameLikelihood(name);
     out.setIsLikelyName(result.isLikely);
